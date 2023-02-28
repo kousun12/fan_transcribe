@@ -16,16 +16,17 @@ After that, you can use the main `fan_transcribe.py` module:
 ```bash
 $ python fan_transcribe.py -h                                                
 
-usage: fan_transcribe.py [-h] [-o OUT] [-m MODEL] [-m_seg MIN_SEGMENT_LEN] [-m_silence MIN_SILENCE_LEN] [-f] filename
-
-positional arguments:
-  filename              the local file to transcribe
+usage: fan_transcribe.py [-h] [-i FILENAME] [-o OUT] [-m MODEL] [-u URL] [-g GPU] [-sg MIN_SEGMENT_LEN] [-sl MIN_SILENCE_LEN] [-f]
 
 options:
   -h, --help            show this help message and exit
+  -i FILENAME, --filename FILENAME
+                        a local file to transcribe
+  -u URL, --url URL     optional remote url of an audio file to transcribe
   -o OUT, --out OUT     optional output directory for transcription results. defaults to ./transcripts/
   -m MODEL, --model MODEL
-                        model to use for transcription. defaults to base.en. model options: [tiny.en, base.en, small.en, medium.en, large]
+                        model to use for transcription. defaults to base.en. model options: [tiny.en, tiny, base.en, base, small.en, small, medium.en, medium, large, large-v1,
+                        large-v2]
   -g GPU, --gpu GPU     optional GPU to use for transcription. defaults to None. GPU options: [t4, a100, a100-20g, a10g, any]
   -sg MIN_SEGMENT_LEN, --min_segment_len MIN_SEGMENT_LEN
                         minimum segment length (in seconds) for fan out. defaults to 5.0
@@ -38,9 +39,9 @@ options:
 Example usage:
 
 ```bash
-$ python fan_transcribe.py test.mp3
-$ python fan_transcribe.py ~/docs/test.mp3 -m base.en -o ./xcribe/
-$ python fan_transcribe.py test.mp3 --min_segment_len 30 --min_silence_len 2
-$ python fan_transcribe.py test.mp3 --gpu t4
-$ python fan_transcribe.py already-processed.mp3 --min_silence_len 3 -f
+$ python fan_transcribe.py -i test.mp3
+$ python fan_transcribe.py -i ~/docs/test.mp3 -m base.en -o ./xcribe/
+$ python fan_transcribe.py -i test.mp3 --min_segment_len 30 --min_silence_len 2
+$ python fan_transcribe.py -i test.mp3 --gpu t4
+$ python fan_transcribe.py -i already-processed.mp3 --min_silence_len 3 -f
 ```

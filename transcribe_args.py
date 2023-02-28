@@ -1,18 +1,37 @@
 import argparse
+from pathlib import Path
+import hashlib
 import dataclasses
+import sys
+from typing import Union
 
 from modal.gpu import STRING_TO_GPU_CONFIG
 
 
 @dataclasses.dataclass
-class ScriptArgs:
-    filename: str
-    out: str
+class TranscribeConfig:
+    filename: Union[str, None]
+    url: Union[str, None]
+    out: Union[str, None]
     model: str
     min_segment_len: float
     min_silence_len: float
-    force: bool
-    gpu: str
+    force: Union[bool, None]
+    gpu: Union[str, None]
+
+
+def identifier(for_config: TranscribeConfig):
+    if for_config.filename and for_config.url:
+        raise ValueError("Specify either filename or url, not both")
+    if for_config.filename:
+        file = Path(for_config.filename)
+        source = file.name
+    elif for_config.url:
+        source = for_config.url
+    else:
+        raise ValueError("Must specify either filename or url")
+
+    return source, hashlib.md5(source.encode("utf-8")).hexdigest()
 
 
 @dataclasses.dataclass
@@ -37,40 +56,84 @@ all_models = {
 
 DEFAULT_MODEL = all_models["base.en"]
 
-parser = argparse.ArgumentParser()
-parser.add_argument("filename", help="the local file to transcribe")
-parser.add_argument(
-    "-o",
-    "--out",
-    help="optional output directory for transcription results. defaults to ./transcripts/",
-)
-parser.add_argument(
-    "-m",
-    "--model",
-    help=f"model to use for transcription. defaults to {DEFAULT_MODEL.name}. model options: [{', '.join(all_models.keys())}]",
-    default=DEFAULT_MODEL.name,
-)
 
-parser.add_argument(
-    "-g",
-    "--gpu",
-    help=f"optional GPU to use for transcription. defaults to None. GPU options: [{', '.join(STRING_TO_GPU_CONFIG.keys())}]",
-    default=None,
-)
-parser.add_argument(
-    "-sg",
-    "--min_segment_len",
-    help=f"minimum segment length (in seconds) for fan out. defaults to 5.0",
-    default=5.0,
-    type=float,
-)
-parser.add_argument(
-    "-sl",
-    "--min_silence_len",
-    help=f"minimum silence length (in seconds) to split on for segment generation. defaults to 2.0",
-    default=2.0,
-    type=float,
-)
-parser.add_argument("-f", "--force", action="store_true", help="re-run a job identifier even if it's already processed")
+is_web = sys.argv[1] == "serve" and sys.argv[2] == "api.py"
+from_cli = sys.argv[0] == "fan_transcribe.py"
 
-args: ScriptArgs = parser.parse_args()
+
+def cfg():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--filename", help="a local file to transcribe")
+    parser.add_argument(
+        "-u",
+        "--url",
+        help=f"optional remote url of an audio file to transcribe",
+    )
+    parser.add_argument(
+        "-o",
+        "--out",
+        help="optional output directory for transcription results. defaults to ./transcripts/",
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        help=f"model to use for transcription. defaults to {DEFAULT_MODEL.name}. model options: [{', '.join(all_models.keys())}]",
+        default=DEFAULT_MODEL.name,
+    )
+    parser.add_argument(
+        "-g",
+        "--gpu",
+        help=f"optional GPU to use for transcription. defaults to None. GPU options: [{', '.join(STRING_TO_GPU_CONFIG.keys())}]",
+        default=None,
+    )
+    parser.add_argument(
+        "-sg",
+        "--min_segment_len",
+        help=f"minimum segment length (in seconds) for fan out. defaults to 5.0",
+        default=5.0,
+        type=float,
+    )
+    parser.add_argument(
+        "-sl",
+        "--min_silence_len",
+        help=f"minimum silence length (in seconds) to split on for segment generation. defaults to 2.0",
+        default=2.0,
+        type=float,
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="re-run a job identifier even if it's already processed",
+    )
+    return parser.parse_args()
+
+
+def default_args() -> TranscribeConfig:
+    return TranscribeConfig(
+        url=None,
+        filename=None,
+        out=None,
+        model=DEFAULT_MODEL.name,
+        min_segment_len=5,
+        min_silence_len=2,
+        force=None,
+        gpu=None,
+    )
+
+
+if from_cli:
+    args: TranscribeConfig = TranscribeConfig(**vars(cfg()))
+elif is_web:
+    args = TranscribeConfig(
+        url=None,
+        filename=None,
+        out=None,
+        model=all_models["base.en"].name,
+        min_segment_len=10,
+        min_silence_len=2,
+        force=None,
+        gpu=None,
+    )
+else:
+    args = default_args()
