@@ -3,7 +3,7 @@ import modal
 import json
 from pathlib import Path
 import re
-from typing import Iterator, Tuple, NamedTuple
+from typing import Iterator, Tuple, NamedTuple, Dict, Any
 from logger import log
 from from_url import cache_file
 import os
@@ -206,7 +206,7 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 10,  # 10 minutes
 )
-def transcribe(cfg: TranscribeConfig):
+def start_transcribe(cfg: TranscribeConfig):
     import whisper
     from modal import container_app
 
@@ -251,27 +251,10 @@ def transcribe(cfg: TranscribeConfig):
 
 class FanTranscriber:
     @staticmethod
-    def run():
-        with stub.run():
-            return transcribe.call(cfg=args)
-
-    # @staticmethod
-    # def trigger_job(file: Path, app: modal.App):
-    #     now = int(time.time())
-    #     try:
-    #         running = app.running_jobs[file.name]
-    #         if (
-    #             isinstance(running, RunningJob)
-    #             and (now - running.start_time) < MAX_JOB_AGE_SECS
-    #         ):
-    #             existing_call_id = running.call_id
-    #             log.info(
-    #                 f"Found existing, unexpired call ID {existing_call_id}, {file.name}"
-    #             )
-    #             return {"call_id": existing_call_id}
-    #     except KeyError:
-    #         pass
-    #     call = transcribe.spawn(file.name)
-    #     app.running_jobs[file.name] = RunningJob(
-    #         call_id=call.object_id, start_time=now
-    #     )
+    def run(overrides: dict = None):
+        cfg = args.merge(overrides) if overrides else args
+        if stub.is_inside():
+            return start_transcribe.call(cfg=cfg)
+        else:
+            with stub.run():
+                return start_transcribe.call(cfg=cfg)

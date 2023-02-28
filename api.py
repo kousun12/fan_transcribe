@@ -1,15 +1,16 @@
 from pydantic import BaseModel
-from transcriber import stub, CACHE_DIR, volume
+from transcriber import stub, CACHE_DIR, volume, FanTranscriber
 
 
 class APIArgs(BaseModel):
-    name: str
-    qty: int = 42
+    url: str
 
 
 @stub.webhook(
     method="POST",
     shared_volumes={CACHE_DIR: volume},
+    keep_warm=True,
 )
-def transcribe(args: APIArgs):
-    return {"foo": "bar"}
+def transcribe(api_args: APIArgs):
+    results = FanTranscriber.run({"url": api_args.url})
+    return results

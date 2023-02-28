@@ -3,7 +3,7 @@ from pathlib import Path
 import hashlib
 import dataclasses
 import sys
-from typing import Union
+from typing import Union, Dict
 
 from modal.gpu import STRING_TO_GPU_CONFIG
 
@@ -18,6 +18,9 @@ class TranscribeConfig:
     min_silence_len: float
     force: Union[bool, None]
     gpu: Union[str, None]
+
+    def merge(self, other: Dict):
+        return dataclasses.replace(self, **other)
 
 
 def identifier(for_config: TranscribeConfig):
