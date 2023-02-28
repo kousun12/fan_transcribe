@@ -11,7 +11,7 @@ Modal's workflow allows you to describe system images, define remote functions, 
 
 ## Benchmarks
 
-The following are benchmark results from running the `medium.en` model on a ~1h30m audio file. 
+The following are benchmark results from running the `medium.en` model on a ~1h30m audio file:
 
 | Environment    | Runtime | Segments | Concurrency     | Cost  | 
 |----------------|---------|----------|-----------------|-------|
@@ -20,6 +20,8 @@ The following are benchmark results from running the `medium.en` model on a ~1h3
 | Modal t4 GPU   | 0:07:55 | 254      | ~14 Containers  | $1.24 |
 | Modal a10g GPU | 0:03:49 | 254      | ~22 Containers  | $1.49 |
 | Modal CPU      | 0:03:28 | 508      | ~345 Containers | $4.09 |
+
+Practically, I have been finding the `base` and `tiny` models to be good enough, and those will run about 8-16x faster and mostly cost < $0.08 for the same file. 
 
 ## Usage
 
