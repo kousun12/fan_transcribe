@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 from typing import Iterator, Tuple, NamedTuple
+
 from transcribe_args import args, all_models, WhisperModel, ScriptArgs
 
 CACHE_DIR = "/cache"
@@ -60,6 +61,7 @@ def create_mount():
 
 
 mounts = [] if stub.is_inside() else [create_mount()]
+gpu = None if stub.is_inside() else args.gpu
 
 
 @stub.function(mounts=mounts, image=app_image)
@@ -108,8 +110,8 @@ def split_silences(
     mounts=mounts,
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
-    # gpu="A10G",
-    cpu=2,
+    gpu=gpu,
+    cpu=None if gpu else 2,
 )
 def transcribe_segment(
     start: float,
@@ -141,7 +143,7 @@ def transcribe_segment(
         transcription = model.transcribe(f.name, language="en", fp16=use_gpu, temperature=0.0)  # type: ignore
 
     t1 = time.time()
-    log.info(f"Transcribed segment {start:.2f} to {end:.2f} of {end - start:.2f} in {t1 - t0:.2f} seconds.")
+    log.info(f"Transcribed segment [{int(start)}, {int(end)}] len={end - start:.2f}s in {t1 - t0:.2f}s on {device}")
 
     # convert back to global time
     for segment in transcription["segments"]:

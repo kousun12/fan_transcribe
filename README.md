@@ -1,7 +1,7 @@
 # fan_transcribe
 Fan out audio transcription tasks via [OpenAI Whisper](https://github.com/openai/whisper) and [Modal Labs](https://modal.com/docs/guide).
 
-OpenAI Whisper is a tool for running audio transcriptions, but it's not especially fast to run on a local machine. This project is a wrapper around Whisper that allows you to fan out transcription tasks to a cluster of machines provisioned by Modal.
+OpenAI Whisper is a tool for running audio transcriptions, but it's not especially fast to run on a local machine. This project is a command line wrapper around Whisper that allows you to fan out transcription tasks to a cluster of machines provisioned by Modal.
 
 The key ideas here are that you can first use `ffmpeg` to break up an audio file by gaps of silence, then you can transcribe each of those audio chunks in parallel on a managed set of containers. 
 
@@ -26,6 +26,7 @@ options:
   -o OUT, --out OUT     optional output directory for transcription results. defaults to ./transcripts/
   -m MODEL, --model MODEL
                         model to use for transcription. defaults to base.en. model options: [tiny.en, base.en, small.en, medium.en, large]
+  -g GPU, --gpu GPU     optional GPU to use for transcription. defaults to None. GPU options: [t4, a100, a100-20g, a10g, any]
   -sg MIN_SEGMENT_LEN, --min_segment_len MIN_SEGMENT_LEN
                         minimum segment length (in seconds) for fan out. defaults to 5.0
   -sl MIN_SILENCE_LEN, --min_silence_len MIN_SILENCE_LEN
