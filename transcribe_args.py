@@ -12,6 +12,7 @@ class ScriptArgs:
     min_segment_len: float
     min_silence_len: float
     force: bool
+    gpu: str
 
 
 @dataclasses.dataclass
@@ -71,4 +72,5 @@ parser.add_argument(
     type=float,
 )
 parser.add_argument("-f", "--force", action="store_true", help="re-run a job identifier even if it's already processed")
-args = parser.parse_args()
+
+args: ScriptArgs = parser.parse_args()

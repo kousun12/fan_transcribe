@@ -40,4 +40,7 @@ Example usage:
 ```bash
 $ python fan_transcribe.py test.mp3
 $ python fan_transcribe.py ~/docs/test.mp3 -m base.en -o ./xcribe/
+$ python fan_transcribe.py test.mp3 --min_segment_len 30 --min_silence_len 2
+$ python fan_transcribe.py test.mp3 --gpu t4
+$ python fan_transcribe.py already-processed.mp3 --min_silence_len 3 -f
 ```

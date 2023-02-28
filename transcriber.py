@@ -60,13 +60,17 @@ def create_mount():
     return modal.Mount.from_local_file(fname, remote_path=RAW_AUDIO_DIR / name)
 
 
-mounts = [] if stub.is_inside() else [create_mount()]
-gpu = None if stub.is_inside() else args.gpu
+if stub.is_inside():
+    mounts = []
+    gpu = None
+else:
+    mounts = [create_mount()]
+    gpu = args.gpu
 
 
 @stub.function(mounts=mounts, image=app_image)
 def split_silences(
-    filename: str, min_segment_len: float = 5.0, min_silence_len: float = 2.0
+    filename: str, min_segment_len, min_silence_len
 ) -> Iterator[Tuple[float, float]]:
     import ffmpeg
 
@@ -161,14 +165,15 @@ def transcribe_segment(
 @stub.function(
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
-    timeout=900,
+    timeout=60 * 10, # 10 minutes
 )
 def transcribe_audio(
     filename: str,
     result_path: Path,
     model: WhisperModel,
+    cli_args: ScriptArgs
 ):
-    segment_gen = split_silences.call(filename)
+    segment_gen = split_silences.call(filename, cli_args.min_segment_len, cli_args.min_silence_len)
     full_text = ""
     output_segments = []
     for transcript, s_time in transcribe_segment.starmap(segment_gen, kwargs=dict(filename=filename, model=model)):
@@ -187,7 +192,7 @@ def transcribe_audio(
     mounts=mounts,
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
-    timeout=900,
+    timeout=60 * 10, # 10 minutes
 )
 def fan_transcribe(cli_args: ScriptArgs):
     import whisper
@@ -220,6 +225,7 @@ def fan_transcribe(cli_args: ScriptArgs):
             filename=file.name,
             result_path=result_path,
             model=model,
+            cli_args=cli_args,
         )
 
 
