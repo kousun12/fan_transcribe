@@ -6,6 +6,7 @@ import re
 from typing import Iterator, Tuple, NamedTuple
 from logger import log
 from from_url import cache_file
+import os
 
 from transcribe_args import args, all_models, WhisperModel, TranscribeConfig, identifier
 
@@ -243,8 +244,9 @@ def transcribe(cfg: TranscribeConfig):
             log.error(e)
         finally:
             del container_app.running_jobs[job_id]
-            # logger.info(f"Deleting the audio file in '{destination_path}'")
-            # os.remove(audio_filepath)
+            if cfg.url:
+                log.info(f"Cleaning up cache: {URL_DOWNLOADS_DIR / job_id}")
+                os.remove(URL_DOWNLOADS_DIR / job_id)
 
 
 class FanTranscriber:

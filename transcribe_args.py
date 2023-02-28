@@ -72,7 +72,7 @@ def cfg():
     parser.add_argument(
         "-o",
         "--out",
-        help="optional output directory for transcription results. defaults to ./transcripts/",
+        help="optional output directory for transcription results. defaults to ./transcripts/ NB: unless you suffix this arg with .json, it will be interpreted as a directory",
     )
     parser.add_argument(
         "-m",

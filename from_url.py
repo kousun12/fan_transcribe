@@ -47,4 +47,4 @@ def cache_file(url: str, destination: Path, overwrite: bool = False) -> None:
     log.info(f"Downloaded {size} from {url}")
     with open(destination, "wb") as f:
         f.write(result.data)
-    log.info(f"Stored audio at {destination}.")
+    log.info(f"Stored audio at {destination}")
