@@ -233,10 +233,7 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
         with open(result_path, "r") as f:
             result = json.load(f)
             if notify:
-                requests.post(
-                    notify["url"],
-                    json={"data": result, "metadata": notify["metadata"] or {}},
-                )
+                notify_webhook(result, notify)
             return result
     else:
         container_app.running_jobs[job_id] = RunningJob(
@@ -247,10 +244,7 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
         try:
             result = fan_out_work.call(result_path=result_path, model=model, cfg=cfg)
             if notify:
-                requests.post(
-                    notify["url"],
-                    json={"data": result, "metadata": notify["metadata"] or {}},
-                )
+                notify_webhook(result, notify)
             return result
         except Exception as e:
             log.error(e)
@@ -259,6 +253,14 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
             if cfg.url:
                 log.info(f"Cleaning up cache: {URL_DOWNLOADS_DIR / job_id}")
                 os.remove(URL_DOWNLOADS_DIR / job_id)
+
+
+def notify_webhook(result, notify):
+    # todo add a signature, signed with the secret key
+    requests.post(
+        notify["url"],
+        json={"data": result, "metadata": notify["metadata"] or {}},
+    )
 
 
 class FanTranscriber:
