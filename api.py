@@ -4,12 +4,12 @@ from pydantic import BaseModel
 from transcriber import stub, CACHE_DIR, volume, FanTranscriber
 from fastapi import Header
 from typing import Union
-import requests
 
 
 class APIArgs(BaseModel):
     url: str
-    callback_url: Union[str, None]
+    callback_url: Union[str, None] = None
+    callback_metadata: Union[dict, None] = None
 
 
 @stub.webhook(
@@ -22,8 +22,13 @@ def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
     secret = os.environ["API_SECRET_KEY"]
     if secret and x_modal_secret != secret:
         return {"error": "Not authorized"}
-    results = FanTranscriber.run({"url": api_args.url})
-
     if api_args.callback_url:
-        requests.post(api_args.callback_url, json={"data": results})
+        results = FanTranscriber.queue(
+            api_args.callback_url,
+            overrides={"url": api_args.url},
+            metadata=api_args.callback_metadata,
+        )
+        return {"call_id": results.object_id}
+
+    results = FanTranscriber.run({"url": api_args.url})
     return results

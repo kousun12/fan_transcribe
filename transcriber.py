@@ -7,6 +7,7 @@ from typing import Iterator, Tuple, NamedTuple, Dict, Any
 from logger import log
 from from_url import cache_file
 import os
+import requests
 
 from transcribe_args import args, all_models, WhisperModel, TranscribeConfig, identifier
 
@@ -206,7 +207,7 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 10,  # 10 minutes
 )
-def start_transcribe(cfg: TranscribeConfig):
+def start_transcribe(cfg: TranscribeConfig, notify=None):
     import whisper
     from modal import container_app
 
@@ -231,6 +232,11 @@ def start_transcribe(cfg: TranscribeConfig):
         log.info(f"Transcription already exists for {job_id}, returning from cache.")
         with open(result_path, "r") as f:
             result = json.load(f)
+            if notify:
+                requests.post(
+                    notify["url"],
+                    json={"data": result, "metadata": notify["metadata"] or {}},
+                )
             return result
     else:
         container_app.running_jobs[job_id] = RunningJob(
@@ -239,7 +245,13 @@ def start_transcribe(cfg: TranscribeConfig):
         if cfg.url:
             cache_file(cfg.url, URL_DOWNLOADS_DIR / job_id)
         try:
-            return fan_out_work.call(result_path=result_path, model=model, cfg=cfg)
+            result = fan_out_work.call(result_path=result_path, model=model, cfg=cfg)
+            if notify:
+                requests.post(
+                    notify["url"],
+                    json={"data": result, "metadata": notify["metadata"] or {}},
+                )
+            return result
         except Exception as e:
             log.error(e)
         finally:
@@ -258,3 +270,13 @@ class FanTranscriber:
         else:
             with stub.run():
                 return start_transcribe.call(cfg=cfg)
+
+    @staticmethod
+    def queue(url: str, overrides: dict = None, metadata: dict = None):
+        cfg = args.merge(overrides) if overrides else args
+        notify = {"url": url, "metadata": metadata}
+        if stub.is_inside():
+            return start_transcribe.spawn(cfg=cfg, notify=notify)
+        else:
+            with stub.run():
+                return start_transcribe.spawn(cfg=cfg, notify=notify)
