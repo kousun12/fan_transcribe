@@ -255,14 +255,10 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
 
 def notify_webhook(result, notify):
     # todo add a signature, signed with the secret key
-    log.info(
-        f"Sending notification to {notify['url']}, meta: {notify['metadata'] or {}}"
+    log.info(f"Sending notification to {notify['url']}")
+    requests.post(
+        notify["url"], json={"data": result, "metadata": notify["metadata"] or {}}
     )
-    r = requests.post(
-        notify["url"],
-        json={"data": result, "metadata": notify["metadata"] or {}},
-    )
-    log.info(f"response: {r.status_code}, {r.json()}")
 
 
 class FanTranscriber:
