@@ -4,6 +4,7 @@ import hashlib
 import dataclasses
 import sys
 from typing import Union, Dict
+from logger import log
 
 from modal.gpu import STRING_TO_GPU_CONFIG
 
@@ -134,8 +135,10 @@ def default_args() -> TranscribeConfig:
 
 
 if from_cli:
+    log.info("Using CLI args")
     args: TranscribeConfig = TranscribeConfig(**vars(cfg()))
 elif is_web:
+    log.info("Using web args as base")
     args = TranscribeConfig(
         url=None,
         video_url=None,
@@ -148,4 +151,5 @@ elif is_web:
         gpu=None,
     )
 else:
+    log.info("Using default args as base")
     args = default_args()
