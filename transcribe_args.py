@@ -133,7 +133,7 @@ elif is_web:
         filename=None,
         out=None,
         model=all_models["base.en"].name,
-        min_segment_len=10,
+        min_segment_len=18,
         min_silence_len=2,
         force=None,
         gpu=None,

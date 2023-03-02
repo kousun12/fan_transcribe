@@ -215,7 +215,7 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
     force = cfg.force or False
 
     job_source, job_id = identifier(cfg)
-    log.info(f"Starting job {job_id}, source: {job_source}")
+    log.info(f"Starting job {job_id}, source: {job_source}, args: {cfg}")
     # cache the model in the shared volume
     model = all_models[model_name]
 
@@ -257,6 +257,7 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
 
 def notify_webhook(result, notify):
     # todo add a signature, signed with the secret key
+    log.info(f"Sending notification to {notify['url']}")
     requests.post(
         notify["url"],
         json={"data": result, "metadata": notify["metadata"] or {}},
