@@ -62,8 +62,32 @@ all_models = {
 
 DEFAULT_MODEL = all_models["base.en"]
 
+DEFAULT_ARGS = TranscribeConfig(
+    url=None,
+    video_url=None,
+    filename=None,
+    out=None,
+    model=DEFAULT_MODEL.name,
+    min_segment_len=5,
+    min_silence_len=2,
+    force=None,
+    gpu=None,
+)
 
-is_web = sys.argv[1] == "serve" and sys.argv[2] == "api.py"
+WEB_DEFAULT_ARGS = TranscribeConfig(
+    url=None,
+    video_url=None,
+    filename=None,
+    out=None,
+    model=all_models["base.en"].name,
+    min_segment_len=18,
+    min_silence_len=2,
+    force=None,
+    gpu=None,
+)
+
+
+local_serve = sys.argv[1] == "serve" and sys.argv[2] == "api.py"
 from_cli = sys.argv[0] == "fan_transcribe.py"
 
 
@@ -120,36 +144,12 @@ def cfg():
     return parser.parse_args()
 
 
-def default_args() -> TranscribeConfig:
-    return TranscribeConfig(
-        url=None,
-        video_url=None,
-        filename=None,
-        out=None,
-        model=DEFAULT_MODEL.name,
-        min_segment_len=5,
-        min_silence_len=2,
-        force=None,
-        gpu=None,
-    )
-
-
 if from_cli:
     log.info("Using CLI args")
     args: TranscribeConfig = TranscribeConfig(**vars(cfg()))
-elif is_web:
+elif local_serve:
     log.info("Using web args as base")
-    args = TranscribeConfig(
-        url=None,
-        video_url=None,
-        filename=None,
-        out=None,
-        model=all_models["base.en"].name,
-        min_segment_len=18,
-        min_silence_len=2,
-        force=None,
-        gpu=None,
-    )
+    args = WEB_DEFAULT_ARGS
 else:
     log.info("Using default args as base")
-    args = default_args()
+    args = DEFAULT_ARGS

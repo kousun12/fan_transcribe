@@ -258,10 +258,11 @@ def notify_webhook(result, notify):
     log.info(
         f"Sending notification to {notify['url']}, meta: {notify['metadata'] or {}}"
     )
-    requests.post(
+    r = requests.post(
         notify["url"],
         json={"data": result, "metadata": notify["metadata"] or {}},
     )
+    log.info(f"response: {r.status_code}, {r.json()}")
 
 
 class FanTranscriber:
@@ -275,8 +276,7 @@ class FanTranscriber:
                 return start_transcribe.call(cfg=cfg)
 
     @staticmethod
-    def queue(url: str, overrides: dict = None, metadata: dict = None):
-        cfg = args.merge(overrides) if overrides else args
+    def queue(url: str, cfg: TranscribeConfig, metadata: dict = None):
         notify = {"url": url, "metadata": metadata or {}}
         if stub.is_inside():
             return start_transcribe.spawn(cfg=cfg, notify=notify)

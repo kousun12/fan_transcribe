@@ -1,6 +1,8 @@
 import modal
 import os
 from pydantic import BaseModel
+
+from transcribe_args import WEB_DEFAULT_ARGS
 from transcriber import stub, CACHE_DIR, volume, FanTranscriber
 from fastapi import Header
 from typing import Union
@@ -25,7 +27,7 @@ def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
     if api_args.callback_url:
         results = FanTranscriber.queue(
             api_args.callback_url,
-            overrides={"url": api_args.url},
+            cfg=WEB_DEFAULT_ARGS.merge({"url": api_args.url}),
             metadata=api_args.callback_metadata,
         )
         return {"call_id": results.object_id}
