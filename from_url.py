@@ -10,10 +10,10 @@ class DownloadResult(NamedTuple):
     content_type: str
 
 
-FAKE_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"
+FAKE_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
 
 
-def download_audio_file(url: str) -> DownloadResult:
+def download_file(url: str) -> DownloadResult:
     req = urllib.request.Request(
         url,
         data=None,
@@ -42,9 +42,26 @@ def cache_file(url: str, destination: Path, overwrite: bool = False) -> None:
             log.info(f"Using cached file at {destination}")
             return
 
-    result = download_audio_file(url=url)
+    result = download_file(url=url)
     size = pretty_size(num=len(result.data))
     log.info(f"Downloaded {size} from {url}")
     with open(destination, "wb") as f:
         f.write(result.data)
     log.info(f"Stored audio at {destination}")
+
+
+def download_vid_audio(
+    url: str,
+    destination_path: Path,
+) -> None:
+    import yt_dlp
+
+    ydl_opts = {
+        "format": "bestaudio/best",
+        "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}],
+        "outtmpl": f"{destination_path}.%(ext)s",
+    }
+    log.info(f"Download video from {url}")
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download(url)
+    log.info(f"Saved audio from {url} to {destination_path}")

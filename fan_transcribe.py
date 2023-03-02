@@ -3,14 +3,14 @@ import json
 import os
 from pathlib import Path
 from transcriber import FanTranscriber
-from transcribe_args import args, identifier
+from transcribe_args import args
 
 WORKING_DIR = Path(__file__).parent
 DEFAULT_OUT = WORKING_DIR / "transcripts"
 
 if __name__ == "__main__":
     t0 = time.perf_counter()
-    job_source, job_id = identifier(args)
+    job_source, job_id = args.identifier()
 
     result = FanTranscriber.run()
 

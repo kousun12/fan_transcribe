@@ -11,6 +11,7 @@ from modal.gpu import STRING_TO_GPU_CONFIG
 @dataclasses.dataclass
 class TranscribeConfig:
     filename: Union[str, None]
+    video_url: Union[str, None]
     url: Union[str, None]
     out: Union[str, None]
     model: str
@@ -22,19 +23,20 @@ class TranscribeConfig:
     def merge(self, other: Dict):
         return dataclasses.replace(self, **other)
 
+    def identifier(self):
+        possible = [self.filename, self.video_url, self.url]
+        only_one = list(map(bool, possible)).count(True) == 1
+        if not only_one:
+            raise ValueError("Specify exactly one of: filename, video_url, or url")
+        if self.filename:
+            file = Path(self.filename)
+            source = file.name
+        elif self.url:
+            source = self.url
+        else:
+            raise ValueError("Must specify either filename or url")
 
-def identifier(for_config: TranscribeConfig):
-    if for_config.filename and for_config.url:
-        raise ValueError("Specify either filename or url, not both")
-    if for_config.filename:
-        file = Path(for_config.filename)
-        source = file.name
-    elif for_config.url:
-        source = for_config.url
-    else:
-        raise ValueError("Must specify either filename or url")
-
-    return source, hashlib.md5(source.encode("utf-8")).hexdigest()
+        return source, hashlib.md5(source.encode("utf-8")).hexdigest()
 
 
 @dataclasses.dataclass
@@ -71,6 +73,11 @@ def cfg():
         "-u",
         "--url",
         help=f"optional remote url of an audio file to transcribe",
+    )
+    parser.add_argument(
+        "-v",
+        "--video_url",
+        help=f"optional remote url of a video to transcribe (supports most video streaming sites)",
     )
     parser.add_argument(
         "-o",
@@ -115,6 +122,7 @@ def cfg():
 def default_args() -> TranscribeConfig:
     return TranscribeConfig(
         url=None,
+        video_url=None,
         filename=None,
         out=None,
         model=DEFAULT_MODEL.name,
@@ -130,6 +138,7 @@ if from_cli:
 elif is_web:
     args = TranscribeConfig(
         url=None,
+        video_url=None,
         filename=None,
         out=None,
         model=all_models["base.en"].name,

@@ -3,13 +3,13 @@ import modal
 import json
 from pathlib import Path
 import re
-from typing import Iterator, Tuple, NamedTuple, Dict, Any
+from typing import Iterator, Tuple, NamedTuple
 from logger import log
 from from_url import cache_file
 import os
 import requests
 
-from transcribe_args import args, all_models, WhisperModel, TranscribeConfig, identifier
+from transcribe_args import args, all_models, WhisperModel, TranscribeConfig
 
 CACHE_DIR = "/cache"
 TRANSCRIPTIONS_DIR = Path(CACHE_DIR, "transcriptions")
@@ -18,7 +18,7 @@ MODEL_DIR = Path(CACHE_DIR, "model")
 RAW_AUDIO_DIR = Path("/mounts", "raw_audio")
 
 app_image = (
-    modal.Image.debian_slim()
+    modal.Image.debian_slim("3.10.0")
     .pip_install(
         "openai-whisper==20230124",
         "dacite==1.8.0",
@@ -27,6 +27,7 @@ app_image = (
         "pandas==1.5.3",
         "loguru==0.6.0",
         "torchaudio==0.13.1",
+        "yt-dlp==2023.2.17",
     )
     .apt_install("ffmpeg")
 )
@@ -43,9 +44,6 @@ class RunningJob(NamedTuple):
     model: str
     start_time: int
     source: str
-
-
-MAX_JOB_AGE_SECS = 10 * 60
 
 
 def create_mounts():
@@ -171,7 +169,7 @@ def transcribe_segment(
     timeout=60 * 10,  # 10 minutes
 )
 def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
-    job_source, job_id = identifier(cfg)
+    job_source, job_id = cfg.identifier()
 
     if cfg.url:
         filepath = URL_DOWNLOADS_DIR / job_id
@@ -214,7 +212,7 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
     model_name = cfg.model
     force = cfg.force or False
 
-    job_source, job_id = identifier(cfg)
+    job_source, job_id = cfg.identifier()
     log.info(f"Starting job {job_id}, source: {job_source}, args: {cfg}")
     # cache the model in the shared volume
     model = all_models[model_name]
@@ -257,7 +255,9 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
 
 def notify_webhook(result, notify):
     # todo add a signature, signed with the secret key
-    log.info(f"Sending notification to {notify['url']}")
+    log.info(
+        f"Sending notification to {notify['url']}, meta: {notify['metadata'] or {}}"
+    )
     requests.post(
         notify["url"],
         json={"data": result, "metadata": notify["metadata"] or {}},
@@ -277,7 +277,7 @@ class FanTranscriber:
     @staticmethod
     def queue(url: str, overrides: dict = None, metadata: dict = None):
         cfg = args.merge(overrides) if overrides else args
-        notify = {"url": url, "metadata": metadata}
+        notify = {"url": url, "metadata": metadata or {}}
         if stub.is_inside():
             return start_transcribe.spawn(cfg=cfg, notify=notify)
         else:
