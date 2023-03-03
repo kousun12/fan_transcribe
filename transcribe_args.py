@@ -4,7 +4,6 @@ import hashlib
 import dataclasses
 import sys
 from typing import Union, Dict
-from logger import log
 
 from modal.gpu import STRING_TO_GPU_CONFIG
 
@@ -34,6 +33,8 @@ class TranscribeConfig:
             source = file.name
         elif self.url:
             source = self.url
+        elif self.video_url:
+            source = self.video_url
         else:
             raise ValueError("Must specify either filename or url")
 
@@ -145,11 +146,8 @@ def cfg():
 
 
 if from_cli:
-    log.info("Using CLI args")
     args: TranscribeConfig = TranscribeConfig(**vars(cfg()))
 elif local_serve:
-    log.info("Using web args as base")
     args = WEB_DEFAULT_ARGS
 else:
-    log.info("Using default args as base")
     args = DEFAULT_ARGS

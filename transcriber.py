@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from typing import Iterator, Tuple, NamedTuple
 from logger import log
-from from_url import cache_file
+from from_url import cache_file, download_vid_audio
 import os
 import requests
 
@@ -19,6 +19,7 @@ RAW_AUDIO_DIR = Path("/mounts", "raw_audio")
 
 app_image = (
     modal.Image.debian_slim("3.10.0")
+    .apt_install("ffmpeg", "git")
     .pip_install(
         "openai-whisper==20230124",
         "dacite==1.8.0",
@@ -27,9 +28,8 @@ app_image = (
         "pandas==1.5.3",
         "loguru==0.6.0",
         "torchaudio==0.13.1",
-        "yt-dlp==2023.2.17",
+        "git+https://github.com/yt-dlp/yt-dlp.git@master",
     )
-    .apt_install("ffmpeg")
 )
 
 stub = modal.Stub("fan-transcribe", image=app_image)
@@ -173,6 +173,8 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
 
     if cfg.url:
         filepath = URL_DOWNLOADS_DIR / job_id
+    elif cfg.video_url:
+        filepath = URL_DOWNLOADS_DIR / f"{job_id}.mp3"
     else:
         file = Path(cfg.filename)
         filepath = RAW_AUDIO_DIR / file.name
@@ -239,6 +241,8 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
         )
         if cfg.url:
             cache_file(cfg.url, URL_DOWNLOADS_DIR / job_id)
+        elif cfg.video_url:
+            download_vid_audio(cfg.video_url, URL_DOWNLOADS_DIR / job_id)
         try:
             result = fan_out_work.call(result_path=result_path, model=model, cfg=cfg)
             if notify:
@@ -248,9 +252,12 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
             log.error(e)
         finally:
             del container_app.running_jobs[job_id]
-            if cfg.url:
-                log.info(f"Cleaning up cache: {URL_DOWNLOADS_DIR / job_id}")
-                os.remove(URL_DOWNLOADS_DIR / job_id)
+            if cfg.url or cfg.video_url:
+                filepath = URL_DOWNLOADS_DIR / (
+                    f"{job_id}{'.mp3' if cfg.video_url else ''}"
+                )
+                log.info(f"Cleaning up cache: {filepath}")
+                os.remove(filepath)
 
 
 def notify_webhook(result, notify):

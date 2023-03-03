@@ -18,7 +18,7 @@ if __name__ == "__main__":
         parsed_path = Path(args.out)
         is_file = args.out.endswith(".json")
         write_to = parsed_path if is_file else parsed_path / f"{job_id}.json"
-    elif args.url:
+    elif args.url or args.video_url:
         write_to = DEFAULT_OUT / f"{job_id}.json"
     else:
         local_file = Path(args.filename)

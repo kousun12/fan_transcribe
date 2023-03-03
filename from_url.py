@@ -57,7 +57,7 @@ def download_vid_audio(
     import yt_dlp
 
     ydl_opts = {
-        "format": "bestaudio/best",
+        "format": "bestaudio",
         "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}],
         "outtmpl": f"{destination_path}.%(ext)s",
     }

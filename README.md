@@ -39,11 +39,13 @@ options:
   -i FILENAME, --filename FILENAME
                         a local file to transcribe
   -u URL, --url URL     optional remote url of an audio file to transcribe
-  -o OUT, --out OUT     optional output directory for transcription results. defaults to ./transcripts/ NB: unless you suffix this arg with .json, it will be
-                        interpreted as a directory
+  -v VIDEO_URL, --video_url VIDEO_URL
+                        optional remote url of a video to transcribe (supports most video streaming sites)
+  -o OUT, --out OUT     optional output directory for transcription results. defaults to ./transcripts/ NB: unless you suffix this arg with .json, it will be interpreted as a
+                        directory
   -m MODEL, --model MODEL
-                        model to use for transcription. defaults to base.en. model options: [tiny.en, tiny, base.en, base, small.en, small, medium.en, medium, large,
-                        large-v1, large-v2]
+                        model to use for transcription. defaults to base.en. model options: [tiny.en, tiny, base.en, base, small.en, small, medium.en, medium, large, large-v1,
+                        large-v2]
   -g GPU, --gpu GPU     optional GPU to use for transcription. defaults to None. GPU options: [t4, a100, a100-20g, a10g, any]
   -sg MIN_SEGMENT_LEN, --min_segment_len MIN_SEGMENT_LEN
                         minimum segment length (in seconds) for fan out. defaults to 5.0
@@ -57,6 +59,7 @@ Example CLI usage:
 ```bash
 $ python fan_transcribe.py -i test.mp3
 $ python fan_transcribe.py -u https://example.com/test.mp3
+$ python fan_transcribe.py -v https://youtube.com/watch?v=1234 # or any other video streaming site
 
 $ python fan_transcribe.py -i ~/docs/test.mp3 -m base.en -o ./xcribe/
 $ python fan_transcribe.py -i test.mp3 --min_segment_len 30 --min_silence_len 2
