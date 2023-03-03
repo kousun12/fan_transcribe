@@ -15,7 +15,7 @@ The following are benchmark results from running the `medium.en` model on a ~1h3
 
 | Environment    | Runtime | Segments | Concurrency     | Cost  | 
 |----------------|---------|----------|-----------------|-------|
-| M1 Pro laptop  | 9:40:54 | 254      | 1               | n/a   |
+| M1 Pro laptop  | 9:40:54 | 1        | 1               | n/a   |
 | Modal CPU      | 0:03:35 | 254      | ~258 Containers | $2.61 |
 | Modal t4 GPU   | 0:07:55 | 254      | ~14 Containers  | $1.24 |
 | Modal a10g GPU | 0:03:49 | 254      | ~22 Containers  | $1.49 |
