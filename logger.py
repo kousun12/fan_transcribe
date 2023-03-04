@@ -5,7 +5,7 @@ def get_logger(name, level=logging.INFO):
     logr = logging.getLogger(name)
     handler = logging.StreamHandler()
     handler.setFormatter(
-        logging.Formatter("%(levelname)s: %(asctime)s: %(name)s  %(message)s")
+        logging.Formatter("%(levelname)s:%(asctime)s: %(message)s", datefmt="%H:%M:%S")
     )
     logr.addHandler(handler)
     logr.setLevel(level)
