@@ -166,7 +166,7 @@ def transcribe_segment(
 @stub.function(
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
-    timeout=60 * 10,  # 10 minutes
+    timeout=60 * 12,
 )
 def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
     job_source, job_id = cfg.identifier()
@@ -205,7 +205,7 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
 @stub.function(
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
-    timeout=60 * 10,  # 10 minutes
+    timeout=60 * 12,
 )
 def start_transcribe(cfg: TranscribeConfig, notify=None):
     import whisper
