@@ -74,6 +74,10 @@ def split_silences(
 
     metadata = ffmpeg.probe(filepath)
     duration = float(metadata["format"]["duration"])
+    if duration < min_segment_len:
+        min_segment_len = duration
+    if duration < min_silence_len:
+        min_silence_len = duration
 
     reader = (
         ffmpeg.input(filepath)
