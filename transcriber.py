@@ -248,6 +248,31 @@ def summarize_transcript(text: str):
         except Exception as e:
             log.info(f"Error: {e}")
 
+    if len(summaries) >= 5:
+        summary_text = "\n".join(summaries)
+        messages = [
+            {
+                "role": "system",
+                "content": f"You are a helpful assistant that summarizes a conversation.",
+            },
+            {
+                "role": "user",
+                "content": f"Give me a bullet point summary of the following:\n\n{summary_text}",
+            },
+        ]
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.5,
+                frequency_penalty=1.0,
+                n=1,
+            )
+            bullet = response["choices"][0]["message"]["content"].strip()
+            summaries.insert(0, f"High level summary:\n\n{bullet}Extended summary:\n\n")
+        except Exception as e:
+            log.info(f"Error: {e}")
+
     return "\n\n".join(summaries)
 
 
