@@ -217,7 +217,7 @@ def summarize_transcript(text: str):
     import openai
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
-    chunk_size = 12000
+    chunk_size = 14000
     summaries = []
     chunks = []
     for i in range(0, len(text), chunk_size):
@@ -227,12 +227,12 @@ def summarize_transcript(text: str):
         c = (
             f"Summarize the following conversation:\n\n{chunk}"
             if not is_multi
-            else f"Summarize the following partial conversation (part {idx + 1}):\n\n{chunk}"
+            else f"Summarize the following conversation (part {idx + 1} of {len(chunks)}):\n\n{chunk}"
         )
         messages = [
             {
                 "role": "system",
-                "content": "You are a helpful assistant that summarizes conversations.",
+                "content": f"You are a helpful assistant that summarizes {'multi-part ' if is_multi else ''}conversations.",
             },
             {"role": "user", "content": c},
         ]
