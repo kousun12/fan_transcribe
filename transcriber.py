@@ -269,7 +269,7 @@ def summarize_transcript(text: str):
                 n=1,
             )
             bullet = response["choices"][0]["message"]["content"].strip()
-            summaries.insert(0, f"Overview:\n\n{bullet}\n\nExtended summary:\n\n")
+            summaries.insert(0, f"Overview:\n\n{bullet}\n\nExtended summary:")
         except Exception as e:
             log.info(f"Error: {e}")
 
