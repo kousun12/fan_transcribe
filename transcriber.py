@@ -218,7 +218,7 @@ def summarize_transcript(text: str):
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
     chunk_size = 12000
-    summary = ""
+    summaries = []
     for i in range(0, len(text), chunk_size):
         substr = text[i : i + chunk_size]
         messages = [
@@ -239,11 +239,11 @@ def summarize_transcript(text: str):
                 frequency_penalty=1.0,
                 n=1,
             )
-            summary += response["choices"][0]["message"]["content"].strip()
+            summaries.append(response["choices"][0]["message"]["content"].strip())
         except Exception as e:
             log.info(f"Error: {e}")
 
-    return summary
+    return "\n\n".join(summaries)
 
 
 @stub.function(
@@ -319,10 +319,10 @@ class FanTranscriber:
     def run(overrides: dict = None):
         cfg = args.merge(overrides) if overrides else args
         if stub.is_inside():
-            return start_transcribe.call(cfg=cfg, summarize=True)
+            return start_transcribe.call(cfg=cfg)
         else:
             with stub.run():
-                return start_transcribe.call(cfg=cfg, summarize=True)
+                return start_transcribe.call(cfg=cfg)
 
     @staticmethod
     def queue(url: str, cfg: TranscribeConfig, metadata: dict = None, summarize=False):
