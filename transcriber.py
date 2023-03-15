@@ -28,6 +28,7 @@ app_image = (
         "pandas==1.5.3",
         "loguru==0.6.0",
         "torchaudio==0.13.1",
+        "openai",
         "git+https://github.com/yt-dlp/yt-dlp.git@master",
     )
 )
@@ -207,11 +208,50 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
 
 
 @stub.function(
+    secrets=[
+        modal.Secret.from_name("openai-secret-key"),
+        modal.Secret.from_name("openai-org-id"),
+    ]
+)
+def summarize_transcript(text: str):
+    import openai
+
+    openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
+    chunk_size = 12000
+    summary = ""
+    for i in range(0, len(text), chunk_size):
+        substr = text[i : i + chunk_size]
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that summarizes conversations.",
+            },
+            {
+                "role": "user",
+                "content": f"Summarize the following conversation:\n\n{substr}",
+            },
+        ]
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.5,
+                frequency_penalty=1.0,
+                n=1,
+            )
+            summary += response["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            log.info(f"Error: {e}")
+
+    return summary
+
+
+@stub.function(
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 12,
 )
-def start_transcribe(cfg: TranscribeConfig, notify=None):
+def start_transcribe(cfg: TranscribeConfig, notify=None, summarize=False):
     import whisper
     from modal import container_app
 
@@ -249,6 +289,9 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
             download_vid_audio(cfg.video_url, URL_DOWNLOADS_DIR / job_id)
         try:
             result = fan_out_work.call(result_path=result_path, model=model, cfg=cfg)
+            if summarize:
+                summary = summarize_transcript.call(result["full_text"])
+                result["summary"] = summary
             if notify:
                 notify_webhook(result, notify)
             return result
@@ -276,16 +319,18 @@ class FanTranscriber:
     def run(overrides: dict = None):
         cfg = args.merge(overrides) if overrides else args
         if stub.is_inside():
-            return start_transcribe.call(cfg=cfg)
+            return start_transcribe.call(cfg=cfg, summarize=True)
         else:
             with stub.run():
-                return start_transcribe.call(cfg=cfg)
+                return start_transcribe.call(cfg=cfg, summarize=True)
 
     @staticmethod
-    def queue(url: str, cfg: TranscribeConfig, metadata: dict = None):
+    def queue(url: str, cfg: TranscribeConfig, metadata: dict = None, summarize=False):
         notify = {"url": url, "metadata": metadata or {}}
         if stub.is_inside():
-            return start_transcribe.spawn(cfg=cfg, notify=notify)
+            return start_transcribe.spawn(cfg=cfg, notify=notify, summarize=summarize)
         else:
             with stub.run():
-                return start_transcribe.spawn(cfg=cfg, notify=notify)
+                return start_transcribe.spawn(
+                    cfg=cfg, notify=notify, summarize=summarize
+                )

@@ -10,6 +10,7 @@ from typing import Union
 
 class APIArgs(BaseModel):
     url: str
+    summarize: Union[bool, None] = None
     callback_url: Union[str, None] = None
     callback_metadata: Union[dict, None] = None
 
@@ -29,6 +30,7 @@ def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
             api_args.callback_url,
             cfg=WEB_DEFAULT_ARGS.merge({"url": api_args.url}),
             metadata=api_args.callback_metadata,
+            summarize=bool(api_args.summarize),
         )
         return {"call_id": results.object_id}
 
