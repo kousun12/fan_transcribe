@@ -257,7 +257,7 @@ def summarize_transcript(text: str):
             },
             {
                 "role": "user",
-                "content": f"Give me a bullet point summary of the following:\n\n{summary_text}",
+                "content": f"Condense this conversation summary into bullet points:\n\n{summary_text}",
             },
         ]
         try:
