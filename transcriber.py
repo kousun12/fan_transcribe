@@ -77,6 +77,10 @@ def split_silences(
 
     metadata = ffmpeg.probe(filepath)
     duration = float(metadata["format"]["duration"])
+    if min_segment_len == 0:
+        log.info(f"No split {filepath}")
+        yield 0, duration
+        return
     if duration < min_segment_len:
         min_segment_len = duration
     if duration < min_silence_len:
@@ -286,12 +290,48 @@ def summarize_transcript(text: str):
 
 
 @stub.function(
+    secrets=[
+        modal.Secret.from_name("openai-secret-key"),
+        modal.Secret.from_name("openai-org-id"),
+    ]
+)
+def llm_respond(text: str):
+    import openai
+
+    openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
+    messages = [
+        {
+            "role": "system",
+            "content": f"You are a helpful assistant. Respond to prompts truthfully and if you don't know the answer, say 'I don't know'.",
+        },
+        {
+            "role": "user",
+            "content": text,
+        },
+    ]
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=0.85,
+            frequency_penalty=1.0,
+            n=1,
+        )
+        return response["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        return "I don't know"
+
+
+@stub.function(
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 12,
 )
 def start_transcribe(
-    cfg: TranscribeConfig, notify=None, summarize=False, byte_string=None
+    cfg: TranscribeConfig,
+    notify=None,
+    summarize=False,
+    byte_string=None,
 ):
     import whisper
     from modal import container_app
@@ -318,6 +358,7 @@ def start_transcribe(
     log.info(f"Using model '{model.name}' with {model.params} parameters.")
 
     result_path = TRANSCRIPTIONS_DIR / f"{job_id}.json"
+    use_llm = bool(byte_string)
     if result_path.exists() and not force:
         log.info(f"Transcription already exists for {job_id}, returning from cache.")
         with open(result_path, "r") as f:
@@ -343,6 +384,9 @@ def start_transcribe(
             if summarize:
                 summary = summarize_transcript.call(result["full_text"])
                 result["summary"] = summary
+            if use_llm:
+                llm_response = llm_respond.call(result["full_text"])
+                result["llm_response"] = llm_response
             if notify:
                 notify_webhook(result, notify)
             return result

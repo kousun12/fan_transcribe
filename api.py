@@ -35,6 +35,7 @@ def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
         overrides["url"] = api_args.url
     if api_args.byte_string:
         overrides["filename"] = f"bytes-{int(time.time())}.mp3"
+        overrides["min_segment_len"] = 0
 
     if api_args.callback_url:
         results = FanTranscriber.queue(
