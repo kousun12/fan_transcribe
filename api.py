@@ -2,16 +2,19 @@ import modal
 import os
 from pydantic import BaseModel
 
+import time
 from transcribe_args import WEB_DEFAULT_ARGS
 from transcriber import stub, CACHE_DIR, volume, FanTranscriber
 from fastapi import Header
 from typing import Union
+from logger import log
 
 
 class APIArgs(BaseModel):
     url: str
     summarize: Union[bool, None] = None
     callback_url: Union[str, None] = None
+    byte_string: Union[str, None] = None
     callback_metadata: Union[dict, None] = None
 
 
@@ -34,5 +37,14 @@ def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
         )
         return {"call_id": results.object_id}
 
-    results = FanTranscriber.run({"url": api_args.url})
+    log.info(f"Processing {api_args.url}")
+    results = FanTranscriber.run(
+        {
+            "url": api_args.url,
+            "filename": f"bytes-{int(time.time())}.mp3"
+            if api_args.byte_string
+            else None,
+        },
+        byte_string=api_args.byte_string,
+    )
     return results

@@ -8,6 +8,8 @@ from logger import log
 from from_url import cache_file, download_vid_audio
 import os
 import requests
+import base64
+from io import BytesIO
 
 from transcribe_args import args, all_models, WhisperModel, TranscribeConfig
 
@@ -283,7 +285,9 @@ def summarize_transcript(text: str):
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 12,
 )
-def start_transcribe(cfg: TranscribeConfig, notify=None, summarize=False):
+def start_transcribe(
+    cfg: TranscribeConfig, notify=None, summarize=False, byte_string=None
+):
     import whisper
     from modal import container_app
 
@@ -300,6 +304,12 @@ def start_transcribe(cfg: TranscribeConfig, notify=None, summarize=False):
 
     TRANSCRIPTIONS_DIR.mkdir(parents=True, exist_ok=True)
     URL_DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    if byte_string:
+        RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+        b = BytesIO(base64.b64decode(byte_string.encode("ISO-8859-1")))
+        with open(RAW_AUDIO_DIR / cfg.filename, "wb") as file:
+            file.write(b.getbuffer())
+        log.info(f"Saved bytes to {RAW_AUDIO_DIR / cfg.filename}")
 
     log.info(f"Using model '{model.name}' with {model.params} parameters.")
 
@@ -348,13 +358,14 @@ def notify_webhook(result, notify):
 
 class FanTranscriber:
     @staticmethod
-    def run(overrides: dict = None):
+    def run(overrides: dict = None, byte_string: str = None):
+        log.info(f"Starting fan-out transcriber with overrides: {overrides}")
         cfg = args.merge(overrides) if overrides else args
         if stub.is_inside():
-            return start_transcribe.call(cfg=cfg)
+            return start_transcribe.call(cfg=cfg, byte_string=byte_string)
         else:
             with stub.run():
-                return start_transcribe.call(cfg=cfg)
+                return start_transcribe.call(cfg=cfg, byte_string=byte_string)
 
     @staticmethod
     def queue(url: str, cfg: TranscribeConfig, metadata: dict = None, summarize=False):
