@@ -175,7 +175,12 @@ def transcribe_segment(
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 12,
 )
-def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
+def fan_out_work(
+    result_path: Path,
+    model: WhisperModel,
+    cfg: TranscribeConfig,
+    file_dir: Path = RAW_AUDIO_DIR,
+):
     job_source, job_id = cfg.identifier()
 
     if cfg.url:
@@ -184,7 +189,7 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
         filepath = URL_DOWNLOADS_DIR / f"{job_id}.mp3"
     else:
         file = Path(cfg.filename)
-        filepath = RAW_AUDIO_DIR / file.name
+        filepath = file_dir / file.name
 
     segment_gen = split_silences.call(
         str(filepath), cfg.min_segment_len, cfg.min_silence_len
@@ -305,11 +310,10 @@ def start_transcribe(
     TRANSCRIPTIONS_DIR.mkdir(parents=True, exist_ok=True)
     URL_DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
     if byte_string:
-        RAW_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
         b = BytesIO(base64.b64decode(byte_string.encode("ISO-8859-1")))
-        with open(RAW_AUDIO_DIR / cfg.filename, "wb") as file:
+        with open(URL_DOWNLOADS_DIR / cfg.filename, "wb") as file:
             file.write(b.getbuffer())
-        log.info(f"Saved bytes to {RAW_AUDIO_DIR / cfg.filename}")
+        log.info(f"Saved bytes to {URL_DOWNLOADS_DIR / cfg.filename}")
 
     log.info(f"Using model '{model.name}' with {model.params} parameters.")
 
@@ -330,7 +334,12 @@ def start_transcribe(
         elif cfg.video_url:
             download_vid_audio(cfg.video_url, URL_DOWNLOADS_DIR / job_id)
         try:
-            result = fan_out_work.call(result_path=result_path, model=model, cfg=cfg)
+            result = fan_out_work.call(
+                result_path=result_path,
+                model=model,
+                cfg=cfg,
+                file_dir=URL_DOWNLOADS_DIR if byte_string else RAW_AUDIO_DIR,
+            )
             if summarize:
                 summary = summarize_transcript.call(result["full_text"])
                 result["summary"] = summary
@@ -341,6 +350,9 @@ def start_transcribe(
             log.error(e)
         finally:
             del container_app.running_jobs[job_id]
+            if byte_string:
+                log.info(f"Cleaning up cache: {URL_DOWNLOADS_DIR / cfg.filename}")
+                os.remove(URL_DOWNLOADS_DIR / cfg.filename)
             if cfg.url or cfg.video_url:
                 filepath = URL_DOWNLOADS_DIR / (
                     f"{job_id}{'.mp3' if cfg.video_url else ''}"
