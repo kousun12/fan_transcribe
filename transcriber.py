@@ -149,10 +149,10 @@ def transcribe_segment(
 
         use_gpu = torch.cuda.is_available()
         device = "cuda" if use_gpu else "cpu"
-        model = whisper.load_model(
+        transcriber = whisper.load_model(
             model.name, device=device, download_root=str(MODEL_DIR)
         )
-        transcription = model.transcribe(
+        transcription = transcriber.transcribe(
             f.name, language="en", fp16=use_gpu, temperature=0.0
         )
 
