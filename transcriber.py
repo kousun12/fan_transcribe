@@ -384,8 +384,12 @@ def start_transcribe(
                 summary = summarize_transcript.call(result["full_text"])
                 result["summary"] = summary
             if use_llm:
-                llm_response = llm_respond.call(result["full_text"])
-                result["llm_response"] = llm_response
+                res = result["full_text"].strip()
+                if res:
+                    llm_response = llm_respond.call(res)
+                    result["llm_response"] = llm_response
+                else:
+                    result["llm_response"] = "Sorry, I couldn't understand that."
             if notify:
                 notify_webhook(result, notify)
             return result
