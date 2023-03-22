@@ -300,10 +300,10 @@ def llm_respond(text: str):
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
     messages = [
-        # {
-        #     "role": "system",
-        #     "content": f"You are a helpful assistant. Respond to prompts truthfully and if you don't know the answer, say 'I don't know'.",
-        # },
+        {
+            "role": "system",
+            "content": """Do not use "As an AI language model" in your responses.""",
+        },
         {
             "role": "user",
             "content": text,
