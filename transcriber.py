@@ -314,7 +314,6 @@ def llm_respond(text: str):
             model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.85,
-            frequency_penalty=1.0,
             n=1,
         )
         return response["choices"][0]["message"]["content"].strip()
