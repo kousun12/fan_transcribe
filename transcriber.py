@@ -88,7 +88,7 @@ def split_silences(
 
     reader = (
         ffmpeg.input(filepath)
-        .filter("silencedetect", n="-10dB", d=min_silence_len)
+        .filter("silencedetect", n="-15dB", d=min_silence_len)
         .output("pipe:", format="null")
         .run_async(pipe_stderr=True)
     )
@@ -154,9 +154,8 @@ def transcribe_segment(
         )
         transcription = transcriber.transcribe(
             f.name,
-            language="en",
             fp16=use_gpu,
-            temperature=0.0,
+            temperature=0.2,
             initial_prompt="Potentially useful vocab: Smalltalk",
         )
 
