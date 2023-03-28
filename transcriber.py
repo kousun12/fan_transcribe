@@ -65,11 +65,11 @@ else:
     gpu = args.gpu
 
 
-@stub.function(
-    mounts=mounts,
-    image=app_image,
-    shared_volumes={CACHE_DIR: volume},
-)
+# @stub.function(
+#     mounts=mounts,
+#     image=app_image,
+#     shared_volumes={CACHE_DIR: volume},
+# )
 def split_silences(
     filepath: str, min_segment_len, min_silence_len
 ) -> Iterator[Tuple[float, float]]:
@@ -174,11 +174,11 @@ def transcribe_segment(
     return transcription, start
 
 
-@stub.function(
-    image=app_image,
-    shared_volumes={CACHE_DIR: volume},
-    timeout=60 * 12,
-)
+# @stub.function(
+#     image=app_image,
+#     shared_volumes={CACHE_DIR: volume},
+#     timeout=60 * 12,
+# )
 def fan_out_work(
     result_path: Path,
     model: WhisperModel,
@@ -195,7 +195,7 @@ def fan_out_work(
         file = Path(cfg.filename)
         filepath = file_dir / file.name
 
-    segment_gen = split_silences.call(
+    segment_gen = split_silences(
         str(filepath), cfg.min_segment_len, cfg.min_silence_len
     )
     full_text = ""
@@ -207,7 +207,7 @@ def fan_out_work(
         output_segments += transcript["segments"]
 
     transcript = {
-        "full_text": full_text,
+        "full_text": full_text.strip(),
         "segments": output_segments,
         "model": model.name,
     }
@@ -218,17 +218,17 @@ def fan_out_work(
     return transcript
 
 
-@stub.function(
-    secrets=[
-        modal.Secret.from_name("openai-secret-key"),
-        modal.Secret.from_name("openai-org-id"),
-    ]
-)
+# @stub.function(
+#     secrets=[
+#         modal.Secret.from_name("openai-secret-key"),
+#         modal.Secret.from_name("openai-org-id"),
+#     ]
+# )
 def summarize_transcript(text: str):
     import openai
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
-    chunk_size = 14000
+    chunk_size = 15000
     summaries = []
     chunks = []
     for i in range(0, len(text), chunk_size):
@@ -251,8 +251,8 @@ def summarize_transcript(text: str):
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=messages,
-                temperature=0.5,
-                frequency_penalty=1.0,
+                temperature=0.7,
+                frequency_penalty=0.5,
                 n=1,
             )
             summaries.append(response["choices"][0]["message"]["content"].strip())
@@ -275,7 +275,7 @@ def summarize_transcript(text: str):
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=messages,
-                temperature=0.5,
+                temperature=0.7,
                 frequency_penalty=1.0,
                 n=1,
             )
@@ -289,12 +289,12 @@ def summarize_transcript(text: str):
     return "\n\n".join(summaries)
 
 
-@stub.function(
-    secrets=[
-        modal.Secret.from_name("openai-secret-key"),
-        modal.Secret.from_name("openai-org-id"),
-    ]
-)
+# @stub.function(
+#     secrets=[
+#         modal.Secret.from_name("openai-secret-key"),
+#         modal.Secret.from_name("openai-org-id"),
+#     ]
+# )
 def llm_respond(text: str):
     import openai
 
@@ -325,6 +325,10 @@ def llm_respond(text: str):
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 12,
+    secrets=[
+        modal.Secret.from_name("openai-secret-key"),
+        modal.Secret.from_name("openai-org-id"),
+    ],
 )
 def start_transcribe(
     cfg: TranscribeConfig,
@@ -374,19 +378,19 @@ def start_transcribe(
         elif cfg.video_url:
             download_vid_audio(cfg.video_url, URL_DOWNLOADS_DIR / job_id)
         try:
-            result = fan_out_work.call(
+            result = fan_out_work(
                 result_path=result_path,
                 model=model,
                 cfg=cfg,
                 file_dir=URL_DOWNLOADS_DIR if byte_string else RAW_AUDIO_DIR,
             )
             if summarize:
-                summary = summarize_transcript.call(result["full_text"])
+                summary = summarize_transcript(result["full_text"])
                 result["summary"] = summary
             if use_llm:
                 res = result["full_text"].strip()
                 if res:
-                    llm_response = llm_respond.call(res)
+                    llm_response = llm_respond(res)
                     result["llm_response"] = llm_response
                 else:
                     result["llm_response"] = "Sorry, I couldn't understand that."
