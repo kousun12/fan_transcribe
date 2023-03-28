@@ -225,6 +225,7 @@ def fan_out_work(
 #     ]
 # )
 def summarize_transcript(text: str):
+    log.info("Summarizing transcript")
     import openai
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
@@ -235,6 +236,7 @@ def summarize_transcript(text: str):
         chunks.append(text[i : i + chunk_size])
     is_multi = len(chunks) > 1
     for idx, chunk in enumerate(chunks):
+        log.info(f"Summary chunk {idx + 1}/{len(chunks)}")
         if not is_multi:
             msg = f"Summarize the following conversation:\n\n{chunk}"
         elif idx == 0:
@@ -259,7 +261,9 @@ def summarize_transcript(text: str):
                 frequency_penalty=0.5,
                 n=1,
             )
-            summaries.append(response["choices"][0]["message"]["content"].strip())
+            summary = response["choices"][0]["message"]["content"].strip()
+            log.info(f"Summary: {summary}")
+            summaries.append(summary)
         except Exception as e:
             log.info(f"Error: {e}")
 
@@ -296,6 +300,7 @@ def summarize_transcript(text: str):
 #     ]
 # )
 def llm_respond(text: str):
+    log.info("Running LLM response")
     import openai
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
@@ -329,6 +334,7 @@ def llm_respond(text: str):
         modal.Secret.from_name("openai-secret-key"),
         modal.Secret.from_name("openai-org-id"),
     ],
+    keep_warm=1,
 )
 def start_transcribe(
     cfg: TranscribeConfig,
