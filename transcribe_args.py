@@ -80,8 +80,8 @@ WEB_DEFAULT_ARGS = TranscribeConfig(
     filename=None,
     out=None,
     model=all_models["base"].name,
-    min_segment_len=8,
-    min_silence_len=2,
+    min_segment_len=3,
+    min_silence_len=1.5,
 )
 
 
