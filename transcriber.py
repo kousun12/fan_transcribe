@@ -235,18 +235,22 @@ def summarize_transcript(text: str):
         chunks.append(text[i : i + chunk_size])
     is_multi = len(chunks) > 1
     for idx, chunk in enumerate(chunks):
-        c = (
-            f"Summarize the following conversation:\n\n{chunk}"
-            if not is_multi
-            else f"Summarize the following conversation (part {idx + 1} of {len(chunks)}):\n\n{chunk}"
-        )
+        if not is_multi:
+            msg = f"Summarize the following conversation:\n\n{chunk}"
+        elif idx == 0:
+            msg = f"Start summarizing the first part of this conversation:\n\n{chunk}"
+        else:
+            msg = f"Continue your summary by summarizing the next part:\n\n{chunk}"
+
         messages = [
             {
                 "role": "system",
-                "content": f"You are a helpful assistant that summarizes {'multi-part ' if is_multi else ''}conversations.",
+                "content": f"You are an AI that summarizes {'multi-part ' if is_multi else ''}conversations.",
             },
-            {"role": "user", "content": c},
         ]
+        if len(summaries) > 0:
+            messages.extend([{"role": "assistant", "content": s} for s in summaries])
+        messages.append({"role": "user", "content": msg})
         try:
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
@@ -262,10 +266,6 @@ def summarize_transcript(text: str):
     if len(summaries) >= 5:
         summary_text = "\n".join(summaries)
         messages = [
-            {
-                "role": "system",
-                "content": f"You are a helpful assistant that summarizes a conversation.",
-            },
             {
                 "role": "user",
                 "content": f"Condense this conversation summary into bullet points:\n\n{summary_text}",
