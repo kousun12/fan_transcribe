@@ -242,7 +242,7 @@ def summarize_transcript(text: str):
         elif idx == 0:
             msg = f"Start summarizing the first part of this conversation:\n\n{chunk}"
         else:
-            msg = f"Continue your summary by summarizing the next part:\n\n{chunk}"
+            msg = f"Continue your summary by summarizing the next part. Don't reference 'this part' of the conversation, but rather continue your summary by starting with something like 'In the next part..' :\n\n{chunk}"
 
         messages = [
             {
@@ -257,8 +257,8 @@ def summarize_transcript(text: str):
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=messages,
-                temperature=0.7,
-                frequency_penalty=0.5,
+                temperature=0.85,
+                frequency_penalty=1,
                 n=1,
             )
             summary = response["choices"][0]["message"]["content"].strip()
