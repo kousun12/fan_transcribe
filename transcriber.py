@@ -245,8 +245,10 @@ def summarize_transcript(text: str):
             msg = f"Summarize the following conversation:\n\n{chunk}"
         elif idx == 0:
             msg = f"This is the first part of a conversation. Summarize it:\n\n{chunk}"
+        elif idx == len(chunks) - 1:
+            msg = f"This is the end of a conversation. Summarize it:\n\n{chunk}"
         else:
-            msg = f"Continue your summary by summarizing the next part. Start your response with a variation of 'In the next part' or 'After that,', but don't use those words exactly.\n\nNext part:\n\n{chunk}"
+            msg = f"This is part {idx +1}/{len(chunks)} of a conversation. Continue your summary of the convo. Start your response with a variation of 'In the next part' or 'After that,', but don't use those words exactly.\n\nNext part:\n\n{chunk}"
 
         messages = [
             {
