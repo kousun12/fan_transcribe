@@ -23,7 +23,7 @@ app_image = (
     modal.Image.debian_slim("3.10.0")
     .apt_install("ffmpeg", "git")
     .pip_install(
-        "openai-whisper==20230124",
+        "openai-whisper==20230314",
         "dacite==1.8.0",
         "jiwer==2.5.1",
         "ffmpeg-python==0.2.0",
