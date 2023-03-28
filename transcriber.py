@@ -246,7 +246,7 @@ def summarize_transcript(text: str):
         elif idx == 0:
             msg = f"Start summarizing the first part of this conversation:\n\n{chunk}"
         else:
-            msg = f"Continue your summary by summarizing the next part. Don't reference 'this part' of the conversation, but rather continue your summary from where you left off, using transition words if appropriate.\n\nNext part:\n\n{chunk}"
+            msg = f"Continue your summary by summarizing the next part. Start your response with a variation of 'In the next part' or 'After that,', but don't use those words exactly.\n\nNext part:\n\n{chunk}"
 
         messages = [
             {
