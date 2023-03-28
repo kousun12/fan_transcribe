@@ -244,7 +244,7 @@ def summarize_transcript(text: str):
         if not is_multi:
             msg = f"Summarize the following conversation:\n\n{chunk}"
         elif idx == 0:
-            msg = f"Start summarizing the first part of this conversation:\n\n{chunk}"
+            msg = f"This is the first part of a conversation. Summarize it:\n\n{chunk}"
         else:
             msg = f"Continue your summary by summarizing the next part. Start your response with a variation of 'In the next part' or 'After that,', but don't use those words exactly.\n\nNext part:\n\n{chunk}"
 
@@ -270,7 +270,7 @@ def summarize_transcript(text: str):
         except Exception as e:
             log.info(f"Error: {e}")
 
-    if len(summaries) >= 5:
+    if len(summaries) >= 4:
         summary_text = "\n".join(summaries)
         messages = [
             {
