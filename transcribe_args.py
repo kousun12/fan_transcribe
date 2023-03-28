@@ -17,8 +17,9 @@ class TranscribeConfig:
     model: str
     min_segment_len: float
     min_silence_len: float
-    force: Union[bool, None]
-    gpu: Union[str, None]
+    force: Union[bool, None] = None
+    gpu: Union[str, None] = None
+    initial_prompt: Union[str, None] = None
 
     def merge(self, other: Dict):
         return dataclasses.replace(self, **other)
@@ -71,8 +72,6 @@ DEFAULT_ARGS = TranscribeConfig(
     model=DEFAULT_MODEL.name,
     min_segment_len=5,
     min_silence_len=2,
-    force=None,
-    gpu=None,
 )
 
 WEB_DEFAULT_ARGS = TranscribeConfig(
@@ -83,8 +82,6 @@ WEB_DEFAULT_ARGS = TranscribeConfig(
     model=all_models["base"].name,
     min_segment_len=8,
     min_silence_len=2,
-    force=None,
-    gpu=None,
 )
 
 

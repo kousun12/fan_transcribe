@@ -153,7 +153,11 @@ def transcribe_segment(
             model.name, device=device, download_root=str(MODEL_DIR)
         )
         transcription = transcriber.transcribe(
-            f.name, language="en", fp16=use_gpu, temperature=0.0
+            f.name,
+            language="en",
+            fp16=use_gpu,
+            temperature=0.0,
+            initial_prompt="Potentially useful vocab: Smalltalk",
         )
 
     t1 = time.time()

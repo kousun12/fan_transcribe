@@ -16,6 +16,7 @@ class APIArgs(BaseModel):
     callback_url: Union[str, None] = None
     byte_string: Union[str, None] = None
     callback_metadata: Union[dict, None] = None
+    initial_prompt: Union[str, None] = None
 
 
 @stub.webhook(
