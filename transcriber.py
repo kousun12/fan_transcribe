@@ -271,7 +271,7 @@ def summarize_transcript(text: str):
         except Exception as e:
             log.info(f"Error: {e}")
 
-    if len(summaries) and len(text) >= 1000 * 9:
+    if len(summaries) and len(text) >= 1000 * 12:
         summary_text = "\n".join(summaries)
         messages = [
             {
