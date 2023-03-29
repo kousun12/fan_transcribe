@@ -232,7 +232,7 @@ def summarize_transcript(text: str):
     import openai
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
-    chunk_size = 15000
+    chunk_size = 31_000
     summaries = []
     chunks = []
     for i in range(0, len(text), chunk_size):
@@ -260,7 +260,7 @@ def summarize_transcript(text: str):
         messages.append({"role": "user", "content": msg})
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4",
                 messages=messages,
                 temperature=0.85,
                 frequency_penalty=1,
@@ -271,7 +271,7 @@ def summarize_transcript(text: str):
         except Exception as e:
             log.info(f"Error: {e}")
 
-    if len(summaries) >= 4:
+    if len(summaries) and len(text) >= 1000 * 9:
         summary_text = "\n".join(summaries)
         messages = [
             {
@@ -281,9 +281,9 @@ def summarize_transcript(text: str):
         ]
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4",
                 messages=messages,
-                temperature=0.7,
+                temperature=0.5,
                 frequency_penalty=1.0,
                 n=1,
             )
