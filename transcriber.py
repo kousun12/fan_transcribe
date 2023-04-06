@@ -65,11 +65,6 @@ else:
     gpu = args.gpu
 
 
-# @stub.function(
-#     mounts=mounts,
-#     image=app_image,
-#     shared_volumes={CACHE_DIR: volume},
-# )
 def split_silences(
     filepath: str, min_segment_len, min_silence_len
 ) -> Iterator[Tuple[float, float]]:
@@ -177,11 +172,6 @@ def transcribe_segment(
     return transcription, start
 
 
-# @stub.function(
-#     image=app_image,
-#     shared_volumes={CACHE_DIR: volume},
-#     timeout=60 * 12,
-# )
 def fan_out_work(
     result_path: Path,
     model: WhisperModel,
@@ -221,12 +211,6 @@ def fan_out_work(
     return transcript
 
 
-# @stub.function(
-#     secrets=[
-#         modal.Secret.from_name("openai-secret-key"),
-#         modal.Secret.from_name("openai-org-id"),
-#     ]
-# )
 def summarize_transcript(text: str):
     log.info("Summarizing transcript")
     import openai
@@ -297,12 +281,6 @@ def summarize_transcript(text: str):
     return "\n\n".join(summaries)
 
 
-# @stub.function(
-#     secrets=[
-#         modal.Secret.from_name("openai-secret-key"),
-#         modal.Secret.from_name("openai-org-id"),
-#     ]
-# )
 def llm_respond(text: str):
     log.info("Running LLM response")
     import openai
