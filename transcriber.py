@@ -8,6 +8,8 @@ from logger import log
 from from_url import cache_file, download_vid_audio
 import os
 import requests
+import base64
+from io import BytesIO
 
 from transcribe_args import args, all_models, WhisperModel, TranscribeConfig
 
@@ -21,7 +23,7 @@ app_image = (
     modal.Image.debian_slim("3.10.0")
     .apt_install("ffmpeg", "git")
     .pip_install(
-        "openai-whisper==20230124",
+        "openai-whisper==20230314",
         "dacite==1.8.0",
         "jiwer==2.5.1",
         "ffmpeg-python==0.2.0",
@@ -62,11 +64,6 @@ else:
     gpu = args.gpu
 
 
-@stub.function(
-    mounts=mounts,
-    image=app_image,
-    shared_volumes={CACHE_DIR: volume},
-)
 def split_silences(
     filepath: str, min_segment_len, min_silence_len
 ) -> Iterator[Tuple[float, float]]:
@@ -74,6 +71,10 @@ def split_silences(
 
     metadata = ffmpeg.probe(filepath)
     duration = float(metadata["format"]["duration"])
+    if min_segment_len == 0:
+        log.info(f"No split {filepath}")
+        yield 0, duration
+        return
     if duration < min_segment_len:
         min_segment_len = duration
     if duration < min_silence_len:
@@ -81,7 +82,7 @@ def split_silences(
 
     reader = (
         ffmpeg.input(filepath)
-        .filter("silencedetect", n="-10dB", d=min_silence_len)
+        .filter("silencedetect", n="-15dB", d=min_silence_len)
         .output("pipe:", format="null")
         .run_async(pipe_stderr=True)
     )
@@ -142,11 +143,13 @@ def transcribe_segment(
 
         use_gpu = torch.cuda.is_available()
         device = "cuda" if use_gpu else "cpu"
-        model = whisper.load_model(
+        transcriber = whisper.load_model(
             model.name, device=device, download_root=str(MODEL_DIR)
         )
-        transcription = model.transcribe(
-            f.name, language="en", fp16=use_gpu, temperature=0.0
+        transcription = transcriber.transcribe(
+            f.name,
+            fp16=use_gpu,
+            temperature=0.2,
         )
 
     t1 = time.time()
@@ -167,12 +170,12 @@ def transcribe_segment(
     return transcription, start
 
 
-@stub.function(
-    image=app_image,
-    shared_volumes={CACHE_DIR: volume},
-    timeout=60 * 12,
-)
-def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
+def fan_out_work(
+    result_path: Path,
+    model: WhisperModel,
+    cfg: TranscribeConfig,
+    file_dir: Path = RAW_AUDIO_DIR,
+):
     job_source, job_id = cfg.identifier()
 
     if cfg.url:
@@ -181,9 +184,9 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
         filepath = URL_DOWNLOADS_DIR / f"{job_id}.mp3"
     else:
         file = Path(cfg.filename)
-        filepath = RAW_AUDIO_DIR / file.name
+        filepath = file_dir / file.name
 
-    segment_gen = split_silences.call(
+    segment_gen = split_silences(
         str(filepath), cfg.min_segment_len, cfg.min_silence_len
     )
     full_text = ""
@@ -195,7 +198,7 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
         output_segments += transcript["segments"]
 
     transcript = {
-        "full_text": full_text,
+        "full_text": full_text.strip(),
         "segments": output_segments,
         "model": model.name,
     }
@@ -210,8 +213,14 @@ def fan_out_work(result_path: Path, model: WhisperModel, cfg: TranscribeConfig):
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 12,
+    keep_warm=1,
 )
-def start_transcribe(cfg: TranscribeConfig, notify=None):
+def start_transcribe(
+    cfg: TranscribeConfig,
+    notify=None,
+    summarize=False,
+    byte_string=None,
+):
     import whisper
     from modal import container_app
 
@@ -228,6 +237,11 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
 
     TRANSCRIPTIONS_DIR.mkdir(parents=True, exist_ok=True)
     URL_DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    if byte_string:
+        b = BytesIO(base64.b64decode(byte_string.encode("ISO-8859-1")))
+        with open(URL_DOWNLOADS_DIR / cfg.filename, "wb") as file:
+            file.write(b.getbuffer())
+        log.info(f"Saved bytes to {URL_DOWNLOADS_DIR / cfg.filename}")
 
     log.info(f"Using model '{model.name}' with {model.params} parameters.")
 
@@ -248,7 +262,12 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
         elif cfg.video_url:
             download_vid_audio(cfg.video_url, URL_DOWNLOADS_DIR / job_id)
         try:
-            result = fan_out_work.call(result_path=result_path, model=model, cfg=cfg)
+            result = fan_out_work(
+                result_path=result_path,
+                model=model,
+                cfg=cfg,
+                file_dir=URL_DOWNLOADS_DIR if byte_string else RAW_AUDIO_DIR,
+            )
             if notify:
                 notify_webhook(result, notify)
             return result
@@ -256,6 +275,9 @@ def start_transcribe(cfg: TranscribeConfig, notify=None):
             log.error(e)
         finally:
             del container_app.running_jobs[job_id]
+            if byte_string:
+                log.info(f"Cleaning up cache: {URL_DOWNLOADS_DIR / cfg.filename}")
+                os.remove(URL_DOWNLOADS_DIR / cfg.filename)
             if cfg.url or cfg.video_url:
                 filepath = URL_DOWNLOADS_DIR / (
                     f"{job_id}{'.mp3' if cfg.video_url else ''}"
@@ -273,13 +295,14 @@ def notify_webhook(result, notify):
 
 class FanTranscriber:
     @staticmethod
-    def run(overrides: dict = None):
+    def run(overrides: dict = None, byte_string: str = None):
+        log.info(f"Starting fan-out transcriber with overrides: {overrides}")
         cfg = args.merge(overrides) if overrides else args
         if stub.is_inside():
-            return start_transcribe.call(cfg=cfg)
+            return start_transcribe.call(cfg=cfg, byte_string=byte_string)
         else:
             with stub.run():
-                return start_transcribe.call(cfg=cfg)
+                return start_transcribe.call(cfg=cfg, byte_string=byte_string)
 
     @staticmethod
     def queue(url: str, cfg: TranscribeConfig, metadata: dict = None):
