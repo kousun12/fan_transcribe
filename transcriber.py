@@ -151,7 +151,6 @@ def transcribe_segment(
             f.name,
             fp16=use_gpu,
             temperature=0.2,
-            initial_prompt="Potentially useful vocab: Smalltalk",
         )
 
     t1 = time.time()
@@ -281,33 +280,6 @@ def summarize_transcript(text: str):
     return "\n\n".join(summaries)
 
 
-def llm_respond(text: str):
-    log.info("Running LLM response")
-    import openai
-
-    openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
-    messages = [
-        {
-            "role": "system",
-            "content": """Do not use "As an AI language model" in your responses.""",
-        },
-        {
-            "role": "user",
-            "content": text,
-        },
-    ]
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=messages,
-            temperature=0.85,
-            n=1,
-        )
-        return response["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        return "I don't know"
-
-
 @stub.function(
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
@@ -349,7 +321,6 @@ def start_transcribe(
     log.info(f"Using model '{model.name}' with {model.params} parameters.")
 
     result_path = TRANSCRIPTIONS_DIR / f"{job_id}.json"
-    use_llm = bool(byte_string)
     if result_path.exists() and not force:
         log.info(f"Transcription already exists for {job_id}, returning from cache.")
         with open(result_path, "r") as f:
@@ -375,13 +346,6 @@ def start_transcribe(
             if summarize:
                 summary = summarize_transcript(result["full_text"])
                 result["summary"] = summary
-            if use_llm:
-                res = result["full_text"].strip()
-                if res:
-                    llm_response = llm_respond(res)
-                    result["llm_response"] = llm_response
-                else:
-                    result["llm_response"] = "Sorry, I couldn't understand that."
             if notify:
                 notify_webhook(result, notify)
             return result
