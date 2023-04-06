@@ -21,7 +21,6 @@ class APIArgs(BaseModel):
 
 @stub.webhook(
     method="POST",
-    shared_volumes={CACHE_DIR: volume},
     keep_warm=True,
     secret=modal.Secret.from_name("api-secret-key"),
 )
