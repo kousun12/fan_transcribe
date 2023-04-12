@@ -21,7 +21,7 @@ RAW_AUDIO_DIR = Path("/mounts", "raw_audio")
 
 app_image = (
     modal.Image.debian_slim("3.10.0")
-    .apt_install("ffmpeg", "git")
+    .apt_install("ffmpeg", "git", "curl")
     .pip_install(
         "openai-whisper==20230314",
         "dacite==1.8.0",
@@ -31,8 +31,11 @@ app_image = (
         "loguru==0.6.0",
         "torchaudio==0.13.1",
         "openai",
+        "jupyter",
         "git+https://github.com/yt-dlp/yt-dlp.git@master",
     )
+    .run_commands("curl https://sh.rustup.rs -sSf | bash -s -- -y")
+    .run_commands(". $HOME/.cargo/env && cargo install bore-cli")
 )
 
 stub = modal.Stub("fan-transcribe", image=app_image)
@@ -236,7 +239,7 @@ def summarize_transcript(text: str):
         messages = [
             {
                 "role": "system",
-                "content": f"You are an AI that summarizes {'multi-part ' if is_multi else ''}conversations.",
+                "content": f"You are an AI that summarizes {'multi-part ' if is_multi else ''}conversations in a casual voice.",
             },
         ]
         if len(summaries) > 0:
@@ -308,6 +311,25 @@ def llm_respond(text: str):
         return "I don't know"
 
 
+def make_title(from_text: str, what: str = "conversation transcription"):
+    log.info("Summarizing transcript")
+    import openai
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "user",
+                "content": f"{from_text}\n\n=======================\n\nCome up with a short memorable title that describes the above {what}",
+            }
+        ],
+        temperature=0.8,
+        frequency_penalty=1,
+        n=1,
+    )
+    return response["choices"][0]["message"]["content"].strip()
+
+
 @stub.function(
     image=app_image,
     shared_volumes={CACHE_DIR: volume},
@@ -375,6 +397,14 @@ def start_transcribe(
             if summarize:
                 summary = summarize_transcript(result["full_text"])
                 result["summary"] = summary
+                if len(result["full_text"]) > 4000:
+                    title_from = summary
+                    title_type = "conversation summary"
+                else:
+                    title_from = result["full_text"]
+                    title_type = "conversation transcription"
+                title = make_title(title_from, title_type)
+                result["title"] = title
             if use_llm:
                 res = result["full_text"].strip()
                 if res:
@@ -428,3 +458,42 @@ class FanTranscriber:
                 return start_transcribe.spawn(
                     cfg=cfg, notify=notify, summarize=summarize
                 )
+
+
+@stub.function(
+    concurrency_limit=1,
+    timeout=1000,
+    shared_volumes={CACHE_DIR: volume},
+    secrets=[
+        modal.Secret.from_name("api-secret-key"),
+        modal.Secret.from_name("openai-secret-key"),
+        modal.Secret.from_name("openai-org-id"),
+    ],
+)
+def run_jupyter():
+    import subprocess
+
+    jupyter_process = subprocess.Popen(
+        [
+            "jupyter",
+            "notebook",
+            "--no-browser",
+            "--allow-root",
+            "--port=8888",
+            "--NotebookApp.allow_origin='*'",
+            "--NotebookApp.allow_remote_access=1",
+        ],
+        env={**os.environ, "JUPYTER_TOKEN": os.environ["API_SECRET_KEY"] or "1234"},
+    )
+
+    bore_process = subprocess.Popen(
+        ["/root/.cargo/bin/bore", "local", "8888", "--to", "bore.pub"],
+    )
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting...")
+        bore_process.kill()
+        jupyter_process.kill()
