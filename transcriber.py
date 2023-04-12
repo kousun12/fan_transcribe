@@ -57,7 +57,7 @@ def create_mounts():
     if not fname:
         return []
     name = Path(fname).name if fname else ""
-    return [modal.Mount.from_local_file(fname, remote_path=RAW_AUDIO_DIR / name)]
+    return [modal.Mount.from_local_file(fname, remote_path=str(RAW_AUDIO_DIR / name))]
 
 
 if stub.is_inside():
@@ -239,7 +239,7 @@ def summarize_transcript(text: str):
         messages = [
             {
                 "role": "system",
-                "content": f"You are an AI that summarizes {'multi-part ' if is_multi else ''}conversations in a casual voice.",
+                "content": f"You are an AI that summarizes {'multi-part ' if is_multi else ''}conversations.",
             },
         ]
         if len(summaries) > 0:
