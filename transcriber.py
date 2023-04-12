@@ -320,7 +320,7 @@ def make_title(from_text: str, what: str = "conversation transcription"):
         messages=[
             {
                 "role": "user",
-                "content": f"{from_text}\n\n=======================\n\nCome up with a short memorable title that describes the above {what}",
+                "content": f"{from_text}\n\n=======================\n\nCome up with a short memorable (non-clickbait) title that describes the above {what}",
             }
         ],
         temperature=0.8,
