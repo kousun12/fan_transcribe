@@ -19,11 +19,8 @@ class APIArgs(BaseModel):
     initial_prompt: Union[str, None] = None
 
 
-@stub.webhook(
-    method="POST",
-    keep_warm=True,
-    secret=modal.Secret.from_name("api-secret-key"),
-)
+@stub.function(secret=modal.Secret.from_name("api-secret-key"), keep_warm=1)
+@stub.web_endpoint(method="POST")
 def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
     log.info(f"Processing {api_args.url}")
     secret = os.environ["API_SECRET_KEY"]
