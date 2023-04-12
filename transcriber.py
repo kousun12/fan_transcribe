@@ -327,7 +327,10 @@ def make_title(from_text: str, what: str = "conversation transcription"):
         frequency_penalty=1,
         n=1,
     )
-    return response["choices"][0]["message"]["content"].strip()
+    t = response["choices"][0]["message"]["content"].strip()
+    if t.startswith('"') and t.endswith('"'):
+        return t[1:-1]
+    return t
 
 
 @stub.function(
