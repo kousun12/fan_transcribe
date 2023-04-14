@@ -121,6 +121,7 @@ def split_silences(
     shared_volumes={CACHE_DIR: volume},
     gpu=gpu,
     cpu=None if gpu else 2,
+    keep_warm=1,
 )
 def transcribe_segment(
     start: float,
