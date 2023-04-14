@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 import time
 from transcribe_args import WEB_DEFAULT_ARGS
-from transcriber import stub, CACHE_DIR, volume, FanTranscriber
+from transcriber import stub, FanTranscriber, llm_respond
 from fastapi import Header
 from typing import Union
 from logger import log
@@ -15,6 +15,7 @@ class APIArgs(BaseModel):
     summarize: Union[bool, None] = None
     callback_url: Union[str, None] = None
     byte_string: Union[str, None] = None
+    llm_text: Union[str, None] = None
     callback_metadata: Union[dict, None] = None
     initial_prompt: Union[str, None] = None
 
@@ -28,6 +29,9 @@ def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
         return {"error": "Not authorized"}
 
     overrides = {}
+    if api_args.llm_text:
+        answer = llm_respond.call(api_args.llm_text)
+        return {"llm_response": answer, "full_text": api_args.llm_text}
     if api_args.url:
         overrides["url"] = api_args.url
     if api_args.byte_string:

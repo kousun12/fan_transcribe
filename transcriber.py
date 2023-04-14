@@ -285,6 +285,14 @@ def summarize_transcript(text: str):
     return "\n\n".join(summaries)
 
 
+@stub.function(
+    keep_warm=1,
+    timeout=60,
+    secrets=[
+        modal.Secret.from_name("openai-secret-key"),
+        modal.Secret.from_name("openai-org-id"),
+    ],
+)
 def llm_respond(text: str):
     log.info("Running LLM response")
     import openai
@@ -412,7 +420,7 @@ def start_transcribe(
             if use_llm:
                 res = result["full_text"].strip()
                 if res:
-                    llm_response = llm_respond(res)
+                    llm_response = llm_respond.call(res)
                     result["llm_response"] = llm_response
                 else:
                     result["llm_response"] = "Sorry, I couldn't understand that."
