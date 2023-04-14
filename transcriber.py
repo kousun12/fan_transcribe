@@ -301,7 +301,7 @@ def llm_respond(text: str):
     messages = [
         {
             "role": "system",
-            "content": """Do not use "As an AI language model" in your responses.""",
+            "content": """Do not use "As an AI language model" in your responses. Be concise.""",
         },
         {
             "role": "user",
@@ -310,7 +310,7 @@ def llm_respond(text: str):
     ]
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.85,
             n=1,
