@@ -1,5 +1,5 @@
 import time
-import modal
+from modal import Secret, Stub, Image, Dict, SharedVolume, Mount
 import json
 from pathlib import Path
 import re
@@ -20,7 +20,7 @@ MODEL_DIR = Path(CACHE_DIR, "model")
 RAW_AUDIO_DIR = Path("/mounts", "raw_audio")
 
 app_image = (
-    modal.Image.debian_slim("3.10.0")
+    Image.debian_slim("3.10.0")
     .apt_install("ffmpeg", "git", "curl")
     .pip_install(
         "openai-whisper==20230314",
@@ -38,9 +38,9 @@ app_image = (
     .run_commands(". $HOME/.cargo/env && cargo install bore-cli")
 )
 
-stub = modal.Stub("fan-transcribe", image=app_image)
-stub.running_jobs = modal.Dict()
-volume = modal.SharedVolume().persist("fan-transcribe-volume")
+stub = Stub("fan-transcribe", image=app_image)
+stub.running_jobs = Dict()
+volume = SharedVolume().persist("fan-transcribe-volume")
 silence_end_re = re.compile(
     r" silence_end: (?P<end>[0-9]+(\.?[0-9]*)) \| silence_duration: (?P<dur>[0-9]+(\.?[0-9]*))"
 )
@@ -57,7 +57,7 @@ def create_mounts():
     if not fname:
         return []
     name = Path(fname).name if fname else ""
-    return [modal.Mount.from_local_file(fname, remote_path=str(RAW_AUDIO_DIR / name))]
+    return [Mount.from_local_file(fname, remote_path=str(RAW_AUDIO_DIR / name))]
 
 
 if stub.is_inside():
@@ -289,8 +289,8 @@ def summarize_transcript(text: str):
     keep_warm=1,
     timeout=60,
     secrets=[
-        modal.Secret.from_name("openai-secret-key"),
-        modal.Secret.from_name("openai-org-id"),
+        Secret.from_name("openai-secret-key"),
+        Secret.from_name("openai-org-id"),
     ],
 )
 def llm_respond(text: str):
@@ -347,8 +347,8 @@ def make_title(from_text: str, what: str = "conversation transcription"):
     shared_volumes={CACHE_DIR: volume},
     timeout=60 * 12,
     secrets=[
-        modal.Secret.from_name("openai-secret-key"),
-        modal.Secret.from_name("openai-org-id"),
+        Secret.from_name("openai-secret-key"),
+        Secret.from_name("openai-org-id"),
     ],
     keep_warm=1,
 )
@@ -477,9 +477,9 @@ class FanTranscriber:
     timeout=1000,
     shared_volumes={CACHE_DIR: volume},
     secrets=[
-        modal.Secret.from_name("api-secret-key"),
-        modal.Secret.from_name("openai-secret-key"),
-        modal.Secret.from_name("openai-org-id"),
+        Secret.from_name("api-secret-key"),
+        Secret.from_name("openai-secret-key"),
+        Secret.from_name("openai-org-id"),
     ],
 )
 def run_jupyter():

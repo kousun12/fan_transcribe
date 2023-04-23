@@ -1,10 +1,10 @@
-import modal
+from modal import web_endpoint, Secret, Stub, Image
 import os
 from pydantic import BaseModel
 
 import time
 from transcribe_args import WEB_DEFAULT_ARGS
-from transcriber import stub, FanTranscriber, llm_respond
+from transcriber import FanTranscriber, llm_respond, stub
 from fastapi import Header
 from typing import Union
 from logger import log
@@ -20,8 +20,12 @@ class APIArgs(BaseModel):
     initial_prompt: Union[str, None] = None
 
 
-@stub.function(secret=modal.Secret.from_name("api-secret-key"), keep_warm=1)
-@stub.web_endpoint(method="POST")
+# TODO pare down this image
+# stub = Stub("fan-transcribe-web", image=Image.debian_slim("3.10.0"))
+
+
+@stub.function(secret=Secret.from_name("api-secret-key"), keep_warm=1)
+@web_endpoint(method="POST")
 def transcribe(api_args: APIArgs, x_modal_secret: str = Header(default=None)):
     log.info(f"Processing {api_args.url}")
     secret = os.environ["API_SECRET_KEY"]
