@@ -1,6 +1,8 @@
 import spacy
 from modal import Image
 
+from transcriber import stub
+
 entities_image = Image.debian_slim("3.10.0").pip_install("spacy")
 nlp = spacy.load("en_core_web_md")
 
