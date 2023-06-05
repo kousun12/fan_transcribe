@@ -3,8 +3,11 @@ from modal import Image
 
 from transcriber import stub
 
-entities_image = Image.debian_slim("3.10.0").pip_install("spacy")
-nlp = spacy.load("en_core_web_md")
+entities_image = (
+    Image.debian_slim("3.10.0")
+    .pip_install("spacy")
+    .run_commands(["python -m spacy download en_core_web_md"])
+)
 
 
 def google(text, color="blue"):
@@ -83,5 +86,13 @@ def get_entities(text: str):
         else:
             html += doc[token].text + " "
             token += 1
-    final_html = "<div>" + html + "</div>"
+    final_html = "<div class='some-class'>" + html + "</div>"
+    print(final_html)
     return final_html
+
+
+@stub.function(image=entities_image)
+def get_entity_bounds(text: str) -> list[tuple[int, int, str]]:
+    nlp = spacy.load("en_core_web_md")
+    doc = nlp(text)
+    return [(ent.start_char, ent.end_char, ent.label_) for ent in doc.ents]

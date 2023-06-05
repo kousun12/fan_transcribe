@@ -167,6 +167,8 @@ def transcribe_segment(
     for segment in transcription["segments"]:
         segment["start"] += start
         segment["end"] += start
+        segment["entities"] = get_entity_bounds.call(segment["text"])
+
         del segment["tokens"]
         del segment["temperature"]
         del segment["avg_logprob"]
@@ -470,6 +472,22 @@ class FanTranscriber:
                 return start_transcribe.spawn(
                     cfg=cfg, notify=notify, summarize=summarize
                 )
+
+
+entities_image = (
+    Image.debian_slim("3.10.0")
+    .pip_install("spacy")
+    .run_commands(["python -m spacy download en_core_web_md"])
+)
+
+
+@stub.function(image=entities_image)
+def get_entity_bounds(text: str) -> list[tuple[int, int, str]]:
+    import spacy
+
+    nlp = spacy.load("en_core_web_md")
+    doc = nlp(text)
+    return [(ent.start_char, ent.end_char, ent.label_) for ent in doc.ents]
 
 
 @stub.function(
