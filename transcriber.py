@@ -295,21 +295,12 @@ def summarize_transcript(text: str):
         Secret.from_name("openai-org-id"),
     ],
 )
-def llm_respond(text: str):
+def llm_respond(messages: list[dict]):
     log.info("Running LLM response")
     import openai
 
     openai.organization = os.environ["OPENAI_ORGANIZATION_KEY"]
-    messages = [
-        {
-            "role": "system",
-            "content": """Do not use "As an AI language model" in your responses. Be concise.""",
-        },
-        {
-            "role": "user",
-            "content": text,
-        },
-    ]
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -384,6 +375,13 @@ def start_transcribe(
 
     log.info(f"Using model '{model.name}' with {model.params} parameters.")
 
+    messages = [
+        {
+            "role": "system",
+            "content": """Do not use "As an AI language model" in your responses. Be concise.""",
+        },
+    ]
+
     result_path = TRANSCRIPTIONS_DIR / f"{job_id}.json"
     use_llm = bool(byte_string)
     if result_path.exists() and not force:
@@ -422,8 +420,10 @@ def start_transcribe(
             if use_llm:
                 res = result["full_text"].strip()
                 if res:
-                    llm_response = llm_respond.call(res)
+                    messages.append({"role": "user", "content": res})
+                    llm_response = llm_respond.call(messages)
                     result["llm_response"] = llm_response
+                    messages.append({"role": "assistant", "content": llm_response})
                 else:
                     result["llm_response"] = "Sorry, I couldn't understand that."
             if notify:
