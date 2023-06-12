@@ -295,7 +295,7 @@ def summarize_transcript(text: str):
         Secret.from_name("openai-org-id"),
     ],
 )
-def llm_respond(messages: list[dict]):
+def llm_respond(messages: list[dict[str, str]]):
     log.info("Running LLM response")
     import openai
 
